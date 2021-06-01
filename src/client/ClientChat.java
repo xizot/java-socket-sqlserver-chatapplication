@@ -5,9 +5,13 @@
  */
 package client;
 
+import helper.ActionType;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -17,17 +21,24 @@ public class ClientChat extends javax.swing.JFrame {
     private Socket socket;
     private DataInputStream din;
     private DataOutputStream dout;
+      private String Name;
     /**
      * Creates new form ClientChat
      */
     public ClientChat() {
         initComponents();
     }
-    public ClientChat(Socket socket, DataInputStream din, DataOutputStream dout) {
+    public ClientChat(Socket socket, DataInputStream din, DataOutputStream dout, String Name) {
         initComponents();
         this.socket = socket;
         this.din = din;
         this.dout = dout;
+        this.Name = Name;
+        
+        lbName.setText(Name);
+        
+        ClientReader cr = new ClientReader();
+        cr.start();
     }
 
     /**
@@ -44,16 +55,29 @@ public class ClientChat extends javax.swing.JFrame {
         txtMessage = new javax.swing.JTextArea();
         txtInput = new javax.swing.JTextField();
         btnSendMsg = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        lbName = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(221, 221, 221));
 
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true), "Chat Application", javax.swing.border.TitledBorder.CENTER, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Tahoma", 1, 14))); // NOI18N
 
+        txtMessage.setEditable(false);
         txtMessage.setColumns(20);
+        txtMessage.setLineWrap(true);
         txtMessage.setRows(5);
+        txtMessage.setWrapStyleWord(true);
         jScrollPane1.setViewportView(txtMessage);
 
         btnSendMsg.setText("Send");
+        btnSendMsg.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSendMsgActionPerformed(evt);
+            }
+        });
+
+        jLabel1.setText("User: ");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -62,22 +86,30 @@ public class ClientChat extends javax.swing.JFrame {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 553, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(txtInput, javax.swing.GroupLayout.PREFERRED_SIZE, 655, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(btnSendMsg, javax.swing.GroupLayout.DEFAULT_SIZE, 111, Short.MAX_VALUE)))
+                        .addComponent(txtInput)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnSendMsg, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lbName)
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(lbName))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(txtInput)
-                    .addComponent(btnSendMsg, javax.swing.GroupLayout.DEFAULT_SIZE, 31, Short.MAX_VALUE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtInput, javax.swing.GroupLayout.DEFAULT_SIZE, 30, Short.MAX_VALUE)
+                    .addComponent(btnSendMsg, javax.swing.GroupLayout.DEFAULT_SIZE, 30, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -100,6 +132,13 @@ public class ClientChat extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void btnSendMsgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMsgActionPerformed
+        if(txtInput.getText().length() > 0){
+            ClientWriter cw = new ClientWriter();
+            cw.start();
+        }
+    }//GEN-LAST:event_btnSendMsgActionPerformed
 
     /**
      * @param args the command line arguments
@@ -135,11 +174,42 @@ public class ClientChat extends javax.swing.JFrame {
             }
         });
     }
+    
 
+    
+    class ClientWriter extends Thread{
+        @Override
+        public void run(){
+            try {
+                String msg = txtInput.getText();
+                dout.writeUTF(ActionType.CHAT_MESSAGE);
+                dout.writeUTF("[" + Name + "]: " + msg);
+                txtInput.setText("");
+                this.interrupt();
+            } catch (IOException ex) {
+                Logger.getLogger(ClientChat.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        };
+    }
+    class ClientReader extends Thread{
+        @Override
+        public void run(){
+            while(true){
+                try {
+                    String ReceiveMsg = din.readUTF() ;
+                    txtMessage.append(ReceiveMsg +"\n");
+                } catch (IOException ex) {
+                    Logger.getLogger(ClientChat.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnSendMsg;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lbName;
     private javax.swing.JTextField txtInput;
     private javax.swing.JTextArea txtMessage;
     // End of variables declaration//GEN-END:variables

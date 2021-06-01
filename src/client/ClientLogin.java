@@ -26,6 +26,7 @@ public class ClientLogin extends javax.swing.JFrame {
     private Socket socket;
     private DataInputStream din;
     private DataOutputStream dout;
+  
     /**
      * Creates new form ClientLogin
      */
@@ -64,6 +65,7 @@ public class ClientLogin extends javax.swing.JFrame {
         btnBack = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(221, 221, 221));
 
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true), "Log In", javax.swing.border.TitledBorder.CENTER, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Tahoma", 1, 14))); // NOI18N
 
@@ -102,8 +104,8 @@ public class ClientLogin extends javax.swing.JFrame {
                             .addComponent(btnBack))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(btnLogin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(txtPassword, javax.swing.GroupLayout.DEFAULT_SIZE, 150, Short.MAX_VALUE))))
+                            .addComponent(txtPassword, javax.swing.GroupLayout.DEFAULT_SIZE, 150, Short.MAX_VALUE)
+                            .addComponent(btnLogin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap(154, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -117,14 +119,11 @@ public class ClientLogin extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(btnBack))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addComponent(btnLogin)))
-                .addContainerGap(40, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnBack)
+                    .addComponent(btnLogin))
+                .addContainerGap(60, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -157,6 +156,9 @@ public class ClientLogin extends javax.swing.JFrame {
         this.frmWelcome.setVisible(true);
         this.setVisible(false);
         this.dispose();
+        
+        
+        
     }//GEN-LAST:event_btnBackActionPerformed
 
     class Login extends Thread{
@@ -167,33 +169,31 @@ public class ClientLogin extends javax.swing.JFrame {
         @Override
         public void run(){
             try {
-            // TODO add your handling code here:
-            String Username = txtUsername.getText();
-            String Password = txtPassword.getText();
-         
+                // TODO add your handling code here:
+                String Username = txtUsername.getText();
+                String Password = txtPassword.getText();
 
-            dout.writeUTF(LOGIN_ACTION);
-            dout.writeUTF(Username);
-            dout.writeUTF(Password);
-            
-           
-            String ResponseType = din.readUTF();
-            String ResponseMsg = din.readUTF();
-            System.out.println(ResponseType);     
-            System.out.println(ResponseMsg);
-            if(ResponseType.trim().toUpperCase().equals(ActionType.SUCCESS_RESPONSE)){
-                ClientChat cc = new ClientChat(socket, din, dout);
-                cc.setVisible(true);
-                frmLogin.setVisible(false);
+
+                dout.writeUTF(LOGIN_ACTION);
+                dout.writeUTF(Username);
+                dout.writeUTF(Password);
+
+
+                String ResponseType = din.readUTF();
+                String ResponseMsg = din.readUTF();
+                if(ResponseType.trim().toUpperCase().equals(ActionType.SUCCESS_RESPONSE)){
+                    ClientChat cc = new ClientChat(socket, din, dout, ResponseMsg);
+                    cc.setVisible(true);
+                    frmLogin.setVisible(false);
+                }
+                else{
+                    ShowErrorMsg(ResponseMsg);
+                }
+                this.interrupt();
+
+            } catch (IOException ex) {
+                Logger.getLogger(ClientLogin.class.getName()).log(Level.SEVERE, null, ex);
             }
-            else{
-                ShowErrorMsg(ResponseMsg);
-            }
-            
-            
-        } catch (IOException ex) {
-            Logger.getLogger(ClientLogin.class.getName()).log(Level.SEVERE, null, ex);
-        }
         }
     }
     /**

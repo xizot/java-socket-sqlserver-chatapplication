@@ -26,10 +26,12 @@ import model.User;
  * @author Admin
  */
 public class ServerChat extends javax.swing.JFrame {
+
     DataController dct;
     ServerSocket server;
     int Port;
     ArrayList<Socket> Logged = new ArrayList<>();
+
     /**
      * Creates new form ChatServer
      */
@@ -38,16 +40,15 @@ public class ServerChat extends javax.swing.JFrame {
         LoadForm();
     }
 
-    public void RemoveClient(Socket socket){
-        try {
-            Logged.remove(socket);
-            socket.close();
-        } catch (IOException ex) {
-            Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
-        }
+    public void AddToLogged(Socket socket) {
+        Logged.add(socket);
     }
-    
-    public void SendMsgToClient(Socket socket, String Msg){
+
+    public void RemoveClient(Socket socket) {
+        Logged.remove(socket);
+    }
+
+    public void SendMsgToClient(Socket socket, String Msg) {
         try {
             DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
             dout.writeUTF(Msg);
@@ -57,15 +58,17 @@ public class ServerChat extends javax.swing.JFrame {
             Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    public void ShowErrorMsg(String Msg){
+
+    public void ShowErrorMsg(String Msg) {
         JOptionPane.showMessageDialog(new Frame(), Msg, "Dialog", JOptionPane.ERROR_MESSAGE);
     }
-    public void SendMsgToAll(String Msg){
+
+    public void SendMsgToAll(String Msg) {
         for (Socket socket : Logged) {
             SendMsgToClient(socket, Msg);
         }
     }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -90,6 +93,7 @@ public class ServerChat extends javax.swing.JFrame {
         txtIP = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(221, 221, 221));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosed(java.awt.event.WindowEvent evt) {
                 formWindowClosed(evt);
@@ -117,7 +121,7 @@ public class ServerChat extends javax.swing.JFrame {
 
         jLabel1.setText("Run at port:");
 
-        jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true), "SQL SERVER INFORMATION", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Tahoma", 2, 10))); // NOI18N
+        jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true), "SQL SERVER INFORMATION", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP));
 
         txtUsername.setText("xizot");
 
@@ -232,37 +236,34 @@ public class ServerChat extends javax.swing.JFrame {
 
     private void btnStartServerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartServerActionPerformed
         try {
-            
+
             // TODO add your handling code here:
             String IP = txtIP.getText();
             String Username = txtUsername.getText();
             String Password = txtPassword.getText();
             Port = Integer.parseInt(txtPort.getText());
-            
-        
+
             dct = new DataController(Username, Password, IP);
             server = new ServerSocket(Port);
             StartServer ss = new StartServer();
             ss.start();
-            
-           
+
             panelConnect.setVisible(false);
             panelInfo.setVisible(true);
-            
+
             InetAddress inetAddress;
             inetAddress = InetAddress.getLocalHost();
             lbServerInfo.setText(String.format("Server is listening on IP: %s and Port: %d", inetAddress.getHostAddress(), Port));
 
-           
         } catch (Exception ex) {
             ShowErrorMsg(ex.getMessage());
             Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
-        } 
-        
+        }
+
     }//GEN-LAST:event_btnStartServerActionPerformed
 
     private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
-    
+
     }//GEN-LAST:event_formWindowClosed
 
     /**
@@ -304,90 +305,94 @@ public class ServerChat extends javax.swing.JFrame {
     private void LoadForm() {
         panelInfo.setVisible(false);
     }
-    
-    class StartServer extends Thread{
-        
+
+    class StartServer extends Thread {
+
         boolean isRunning = false;
-        public StartServer(){}
-        public void StopServer(){
+
+        public StartServer() {
+        }
+
+        public void StopServer() {
             isRunning = false;
 //                server.close();
             this.interrupt();
         }
+
         @Override
-        public void run(){
+        public void run() {
             isRunning = true;
             try {
-                while(isRunning){
+                while (isRunning) {
                     Socket socket = server.accept();
-                    DataInputStream din = new DataInputStream(socket.getInputStream());   
+                    AddToLogged(socket);
+                    DataInputStream din = new DataInputStream(socket.getInputStream());
                     DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
 
-                    System.out.println("success");
-                    ServerHandler sh = new ServerHandler(socket,dct, din, dout);
+                    System.out.println("A client is connected");
+                    ServerHandler sh = new ServerHandler(socket, dct, din, dout);
                     sh.start();
                 }
-                
+
             } catch (IOException ex) {
                 System.err.println(ex.getMessage());
                 Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
-    
-    class ServerHandler extends Thread{
+
+    class ServerHandler extends Thread {
+
         Socket socket;
         DataController dct;
         DataInputStream din;
         DataOutputStream dout;
+
         public ServerHandler(Socket socket, DataController dct, DataInputStream din, DataOutputStream dout) {
             this.dct = dct;
             this.socket = socket;
             this.din = din;
             this.dout = dout;
         }
-        
-        public void StopHandle() throws IOException{
+
+        public void StopHandle() throws IOException {
 //            RemoveClient(socket);
             this.interrupt();
         }
-        
+
         public void Login(String Username, String Password) throws SQLException, IOException {
-                User user = dct.getUserByUsername(Username);
-               
-                if(user == null){
-                    System.out.println("The username you entered isn't connected to an account");
-                    dout.writeUTF(ActionType.ERROR_RESPONSE);
-                    dout.writeUTF("The username you entered isn't connected to an account");
-                    return;
-                   
-                }
-                if(user.getPassword().equals(Password.trim())){
-                    System.out.println("Login successful");
-                    dout.writeUTF(ActionType.SUCCESS_RESPONSE);
-                    dout.writeUTF("Login successful");
-                     return;
-                }
-                if(!user.getPassword().equals(Password.trim())){
-                    System.out.println("The password that you've entered is incorrect");
-                    dout.writeUTF(ActionType.ERROR_RESPONSE);
-                    dout.writeUTF("The password that you've entered is incorrect.");
-                     return;
-                }
-                System.out.println("The password that you've entered is incorrect");
+            User user = dct.getUserByUsername(Username);
+
+            if (user == null) {
                 dout.writeUTF(ActionType.ERROR_RESPONSE);
-                dout.writeUTF("Something is missing. Please try again");
+                dout.writeUTF("The username you entered isn't connected to an account");
+                return;
+
+            }
+            if (user.getPassword().equals(Password.trim())) {
+                dout.writeUTF(ActionType.SUCCESS_RESPONSE);
+                dout.writeUTF(user.getName());
+                return;
+            }
+            if (!user.getPassword().equals(Password.trim())) {
+                dout.writeUTF(ActionType.ERROR_RESPONSE);
+                dout.writeUTF("The password that you've entered is incorrect.");
+                return;
+            }
+            dout.writeUTF(ActionType.ERROR_RESPONSE);
+            dout.writeUTF("Something is missing. Please try again");
         }
+
         public void Register(User user) {
-            
+
             try {
                 User findUser = dct.getUserByUsername(user.getUsername());
-                if(findUser != null){
+                if (findUser != null) {
                     dout.writeUTF(ActionType.ERROR_RESPONSE);
                     dout.writeUTF("The username is taken. Try another");
                     return;
                 }
-                
+
                 dct.AddUser(user);
                 dout.writeUTF(ActionType.SUCCESS_RESPONSE);
                 dout.writeUTF("Register successfully");
@@ -399,49 +404,88 @@ public class ServerChat extends javax.swing.JFrame {
                     System.err.println(ex1.getMessage());
                     Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex1);
                 }
-              
+
             }
-          
+
         }
-        
+
         @Override
-        public void run(){
+        public void run() {
             String action = "";
-             while (true) {
+            while (true) {
                 try {
                     action = din.readUTF().trim().toUpperCase();
-                    System.out.println(action);
-                    if(action.equals(ActionType.REGISTER_ACTION)){
-                        
-                        String Name = din.readUTF().trim();             
+                } catch (IOException ex) {
+                    try {
+                        socket.close();
+                    } catch (IOException ex1) {
+                        Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex1);
+                    }
+                    RemoveClient(socket);
+                    this.interrupt();
+//                    Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                if (action.equals(ActionType.REGISTER_ACTION)) {
+                    try {
+                        String Name = din.readUTF().trim();
                         String Username = din.readUTF().trim();
                         String Password = din.readUTF().trim();
-                        
+
                         User user = new User(Name, Username, Password);
                         Register(user);
-                        
+                    } catch (IOException ex) {
+                        try {
+                            socket.close();
+                        } catch (IOException ex1) {
+                            Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex1);
+                        }
+                        RemoveClient(socket);
+                        this.interrupt();
                     }
-                    if(action.equals(ActionType.LOGIN_ACTION)){
+
+                }
+                if (action.equals(ActionType.LOGIN_ACTION)) {
+                    try {
                         String Username = din.readUTF().trim();
                         String Password = din.readUTF().trim();
-                        Login(Username, Password);
+                        try {
+                            Login(Username, Password);
+                        } catch (SQLException ex) {
+                            System.err.println(ex.getMessage());
+                            Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    } catch (IOException ex) {
+                        try {
+                            socket.close();
+                        } catch (IOException ex1) {
+                            Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex1);
+                        }
+                        RemoveClient(socket);
+                        this.interrupt();
                     }
-                    if(action.equals(ActionType.CHAT_MESSAGE)){
+                }
+                if (action.equals(ActionType.CHAT_MESSAGE)) {
+                    try {
                         String Msg = din.readUTF();
                         SendMsgToAll(Msg);
-                        
+                    } catch (IOException ex) {
+                        try {
+                            socket.close();
+                        } catch (IOException ex1) {
+                            Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex1);
+                        }
+                        RemoveClient(socket);
+                        this.interrupt();
                     }
-                } catch (Exception ex) {
-                    System.out.println(ex.getMessage());
-                    Logger.getLogger(ServerChat.class.getName()).log(Level.SEVERE, null, ex);
+
                 }
-                   
-                
+
             }
         }
- 
+
     }
-    
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnStartServer;
     private javax.swing.JLabel jLabel1;

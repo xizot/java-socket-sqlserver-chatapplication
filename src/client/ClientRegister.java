@@ -7,12 +7,14 @@ package client;
 
 import helper.ActionType;
 import static helper.ActionType.LOGIN_ACTION;
+import java.awt.Frame;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -65,6 +67,7 @@ public class ClientRegister extends javax.swing.JFrame {
 
         jLabel2.setText("Password:");
 
+        btnRegister.setBackground(new java.awt.Color(221, 221, 221));
         btnRegister.setText("Register");
         btnRegister.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -147,11 +150,16 @@ public class ClientRegister extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+    public void ShowErrorMsg(String Msg){
+        JOptionPane.showMessageDialog(new Frame(), Msg, "Dialog", JOptionPane.ERROR_MESSAGE);
+    }
+    
+    public void ShowSuccessMsg(String Msg){
+        JOptionPane.showMessageDialog(new Frame(), Msg, "Dialog", JOptionPane.INFORMATION_MESSAGE);
+    }
     private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
         // TODO add your handling code here:
        
-        
         Register reg  = new Register();
         reg.start();
         
@@ -212,11 +220,16 @@ public class ClientRegister extends javax.swing.JFrame {
                 dout.writeUTF(Password);
                 
                 
-                String ResponeType = din.readUTF();
-                String ResponeMsg = din.readUTF();
+                String ResponseType = din.readUTF();
+                String ResponseMsg = din.readUTF();
                 
-                System.out.println(ResponeType);
-                System.out.println(ResponeMsg);
+                if(ResponseType.trim().toUpperCase().equals(ActionType.SUCCESS_RESPONSE)){
+                    ShowSuccessMsg(ResponseMsg);
+                }
+                else{
+                    ShowErrorMsg(ResponseMsg);
+                }
+                this.interrupt();
             } catch (IOException ex) {
                 Logger.getLogger(ClientRegister.class.getName()).log(Level.SEVERE, null, ex);
             }
